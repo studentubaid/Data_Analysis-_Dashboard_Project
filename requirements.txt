@@ -1,0 +1,8 @@
+# Core dependencies
+gradio==4.31.4        # UI framework for interactive dashboard
+pandas==2.2.2         # Data manipulation and filtering
+matplotlib==3.9.0     # Chart plotting
+seaborn==0.13.2       # Statistical visualization (heatmap, violin, etc.)
+
+# Optional (if you use numpy directly in filters/charts)
+numpy==1.26.4
