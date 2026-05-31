@@ -50,6 +50,6 @@ This dashboard allows users to filter by season, player, metric, and minutes pla
 Clone the repository and install dependencies:
 
 ```bash
-git clone https://github.com/yourusername/nba-raptor-dashboard.git
+git clone https://github.com/studentubaid/Data_Analysis-_Dashboard_Project
 cd nba-raptor-dashboard
 pip install -r requirements.txt
