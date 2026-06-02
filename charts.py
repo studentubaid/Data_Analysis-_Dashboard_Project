@@ -90,13 +90,21 @@ def area_chart(x):
     return fig
 
 # Count chart function
-def count_chart(x):
-    fig, ax = plt.subplots()
-    sns.countplot(x="season", data=x, ax=ax)
-    ax.set_xlabel("Season")
+def count_chart(df):
+
+    fig, ax = plt.subplots(figsize=(10, 7.3))  # wider figure for spacing
+    sns.countplot(x="season", data=df, ax=ax, color="#1d0dad")
+
+    # Rotate x-axis labels for readability
+    ax.set_xticklabels(ax.get_xticklabels(), rotation=45, ha="right")
+
+    # Add title and layout
     ax.set_ylabel("Number of Players")
-    ax.set_title("Players per Season")
+    ax.set_title("Number of Players per Season")
+    plt.tight_layout()
+
     return fig
+
 
 # Violin chart function
 def violin_chart(x):

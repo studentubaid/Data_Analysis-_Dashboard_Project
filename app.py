@@ -2,54 +2,44 @@ import gradio as gr
 import charts
 import filters
 
-def show_chart(chart_type, season, player_name, metric, min_minutes, max_minutes):
-    df, metric = filters.apply_filters(season=season,
-                                       player_name=player_name,
-                                       metric=metric,
-                                       min_minutes=min_minutes,
-                                       max_minutes=max_minutes)
+def show_all_charts(season, player_name, metric, min_minutes, max_minutes):
+    df, metric = filters.apply_filters(
+        season=season,
+        player_name=player_name,
+        metric=metric,
+        min_minutes=min_minutes,
+        max_minutes=max_minutes
+    )
 
     # Quick stats: top 3 players by WAR
     top_players = df.groupby("player_name")["war_total"].sum().sort_values(ascending=False).head(3)
     stats_text = "Top Players by WAR:\n" + "\n".join([f"{p}: {v:.2f}" for p, v in top_players.items()])
 
-    fig, insight = None, ""
-    if chart_type == "Pie Chart":
-        fig = charts.pi_chart(df)
-        insight = "Pie chart shows top players by possessions."
-    elif chart_type == "Histogram":
-        fig = charts.histo_chart(df[metric])
-        insight = f"Histogram shows distribution of {metric}."
-    elif chart_type == "Line Chart":
-        fig = charts.line_chart(df["season"], df[metric])
-        insight = f"Line chart shows {metric} trend across seasons."
-    elif chart_type == "Bar Chart":
-        fig = charts.bar_chart(df)
-        insight = "Bar chart shows top players by WAR total."
-    elif chart_type == "Scatter Chart":
-        fig = charts.scatter_chart(df["raptor_offense"], df["raptor_defense"])
-        insight = "Scatter plot compares offense vs defense."
-    elif chart_type == "Box Chart":
-        fig = charts.box_chart(df["mp"])
-        insight = "Box chart shows distribution of minutes played."
-    elif chart_type == "Heatmap":
-        fig = charts.heatmap_chart(df)
-        insight = "Heatmap shows correlations between metrics."
-    elif chart_type == "Area Chart":
-        fig = charts.area_chart(df)
-        insight = "Area chart shows cumulative WAR total over seasons."
-    elif chart_type == "Count Chart":
-        fig = charts.count_chart(df)
-        insight = "Count chart shows number of players per season."
-    elif chart_type == "Violin Chart":
-        fig = charts.violin_chart(df)
-        insight = "Violin chart shows distribution of WAR total."
+    # KPI summary values
+    avg_offense = df["raptor_offense"].mean()
+    avg_defense = df["raptor_defense"].mean()
+    avg_minutes = df["mp"].mean()
+    total_war = df["war_total"].sum()
 
-    return stats_text, fig, insight
+    # Generate all charts
+    pie = charts.pi_chart(df)
+    histo = charts.histo_chart(df[metric])
+    line = charts.line_chart(df["season"], df[metric])
+    bar = charts.bar_chart(df)
+    scatter = charts.scatter_chart(df["raptor_offense"], df["raptor_defense"])
+    box = charts.box_chart(df["mp"])
+    heatmap = charts.heatmap_chart(df)
+    area = charts.area_chart(df)
+    count = charts.count_chart(df)
+    violin = charts.violin_chart(df)
+
+    return (stats_text,
+            f"{avg_offense:.2f}", f"{avg_defense:.2f}", f"{avg_minutes:.0f}", f"{total_war:.2f}",
+            pie, histo, line, bar, scatter, box, heatmap, area, count, violin)
 
 
 def clear_filters():
-    return "Pie Chart", "All", "All", "raptor_total", 0, 3000
+    return "All", "All", "raptor_total", 0, 3000
 
 
 with gr.Blocks(title="NBA RAPTOR Dashboard", css="""
@@ -82,40 +72,64 @@ with gr.Blocks(title="NBA RAPTOR Dashboard", css="""
             - `Charts based on` **aggregated or correlation data** (Heatmap, Area, Count) may ignore or flatten the minutes filter.
             """)
 
-    # Horizontal filter bar
+    # Filter bar
     with gr.Row():
-        chart_type = gr.Dropdown(
-            ["Pie Chart", "Histogram", "Line Chart", "Bar Chart", "Scatter Chart",
-             "Box Chart", "Heatmap", "Area Chart", "Count Chart", "Violin Chart"],
-            value="Pie Chart", label="Chart Type"
-        )
         season = gr.Dropdown(["All"] + sorted(filters.player["season"].unique().tolist()), value="All", label="Season")
         player_name = gr.Dropdown(["All"] + sorted(filters.player["player_name"].unique().tolist()), value="All", label="Player")
         metric = gr.Dropdown(["raptor_total","raptor_offense","raptor_defense","war_total","mp"], value="raptor_total", label="Metric")
 
-    # Min/Max sliders in one row
     with gr.Row():
         min_minutes = gr.Slider(0, 3000, value=0, step=100, label="Min Minutes")
         max_minutes = gr.Slider(0, 3000, value=3000, step=100, label="Max Minutes")
 
-    # Buttons row
     with gr.Row():
         apply_btn = gr.Button("Apply Filters")
         clear_btn = gr.Button("Clear Filters")
 
-    # Centered Quick Stats + chart + insight
+    # KPI summary cards
+    with gr.Row():
+        kpi_offense = gr.Textbox(label="Avg RAPTOR Offense", interactive=False)
+        kpi_defense = gr.Textbox(label="Avg RAPTOR Defense", interactive=False)
+        kpi_minutes = gr.Textbox(label="Avg Minutes Played", interactive=False)
+        kpi_war = gr.Textbox(label="Total WAR", interactive=False)
+
+    # Quick Stats
     stats_box = gr.Textbox(label="Quick Stats", interactive=False)
-    chart_output = gr.Plot(label="Visualization")
-    explanation = gr.Textbox(label="Chart Insight", interactive=False)
 
+    # Charts grid
+    with gr.Row():
+        pie_output = gr.Plot(label="Pie Chart")
+        histo_output = gr.Plot(label="Histogram")
+        line_output = gr.Plot(label="Line Chart")
+
+    with gr.Row():
+        bar_output = gr.Plot(label="Bar Chart")
+        scatter_output = gr.Plot(label="Scatter Chart")
+        box_output = gr.Plot(label="Box Chart")
+
+    with gr.Row():
+        heatmap_output = gr.Plot(label="Heatmap")
+        area_output = gr.Plot(label="Area Chart")
+        
+    
+    with gr.Row():
+            count_output = gr.Plot(label="Count Chart")
+            violin_output = gr.Plot(label="Violin Chart")
     # Connect buttons
-    apply_btn.click(show_chart,
-                    inputs=[chart_type, season, player_name, metric, min_minutes, max_minutes],
-                    outputs=[stats_box, chart_output, explanation])
+    apply_btn.click(
+        show_all_charts,
+        inputs=[season, player_name, metric, min_minutes, max_minutes],
+        outputs=[stats_box, kpi_offense, kpi_defense, kpi_minutes, kpi_war,
+                 pie_output, histo_output, line_output,
+                 bar_output, scatter_output, box_output,
+                 heatmap_output, area_output, count_output, violin_output]
+    )
 
-    clear_btn.click(clear_filters,
-                    inputs=[],
-                    outputs=[chart_type, season, player_name, metric, min_minutes, max_minutes])
+    clear_btn.click(
+        clear_filters,
+        inputs=[],
+        outputs=[season, player_name, metric, min_minutes, max_minutes]
+    )
 
 if __name__ == "__main__":
     demo.launch()
